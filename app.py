@@ -10,22 +10,23 @@ import cv2
 import numpy as np
 import base64
 from dotenv import load_dotenv
+import gradio as gr
+import threading
 
 load_dotenv()
+
 # --- CONFIGURATION ---
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# --- API KEYS (Replace with your actual keys) ---
-from flask import Flask, request, jsonify, Response, stream_with_context
-import os, logging, requests, json
-GEMINI_API_KEY = os.getenv("REACT_APP_GEMINI_API_KEY")
-YOUTUBE_API_KEY = os.getenv("REACT_APP_YOUTUBE_API_KEY")
-SPOTIFY_CLIENT_ID = os.getenv("REACT_APP_SPOTIFY_CLIENT_ID")
-SPOTIFY_CLIENT_SECRET = os.getenv("REACT_APP_SPOTIFY_CLIENT_SECRET")
+# --- API KEYS ---
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
-print("Gemini Key Loaded:", GEMINI_API_KEY)
+print("Gemini Key Loaded:", bool(GEMINI_API_KEY))  # Avoid printing sensitive keys
 
 # --- MODEL LOADING (Lazy Loading) ---
 models = {}
@@ -115,7 +116,6 @@ def chat_with_emotion():
 
     return Response(stream_with_context(generate()), mimetype="text/plain")
 
-
 @app.route('/analyze_face', methods=['POST'])
 def analyze_face():
     if 'image' not in request.files:
@@ -155,7 +155,6 @@ def analyze_face():
         logging.error(f"An error occurred during face analysis: {e}", exc_info=True)
         return jsonify({"error": "An internal server error occurred during face analysis."}), 500
 
-
 def get_spotify_token():
     auth_string = f"{SPOTIFY_CLIENT_ID}:{SPOTIFY_CLIENT_SECRET}"
     auth_encoded = base64.b64encode(auth_string.encode()).decode()
@@ -181,13 +180,15 @@ def recommend():
     try:
         yt_query_map = {
             'joy': 'happy uplifting music', 'sadness': 'comforting calming music',
-            'anger': 'calming meditation music', 'optimism': 'motivational videos',
+            'anger': 'calming meditation music', 'optimism': 'motivational speech',
+            'love': 'romantic music', 'fear': 'soothing ambient sounds',
+            'surprise': 'upbeat fun music', 'neutral': 'popular music',
             'happy': 'happy uplifting music', 'sad': 'comforting calming music',
             'angry': 'calming meditation music',
         }
         yt_query = yt_query_map.get(mood, 'popular music')
         yt_res = requests.get(
-            f"https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&q={yt_query}&key={YOUTUBE_API_KEY}"
+            f"https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=1&q={yt_query}&type=video&key={YOUTUBE_API_KEY}"
         ).json()
         video_id = yt_res['items'][0]['id']['videoId']
         recommendations['video'] = {
@@ -203,16 +204,18 @@ def recommend():
     try:
         token = get_spotify_token()
         headers = {'Authorization': f'Bearer {token}'}
-        spotify_query_map = {
-            'joy': 'happy', 'sadness': 'sad', 'anger': 'chill', 'optimism': 'empowering',
-            'happy': 'happy', 'sad': 'sad', 'angry': 'chill',
+        # Using seed_genres for better recommendations
+        spotify_genre_map = {
+            'joy': 'happy', 'sadness': 'sad', 'anger': 'chill', 'optimism': 'pop',
+            'love': 'r-n-b,romance', 'fear': 'ambient', 'surprise': 'dance',
+            'neutral': 'pop', 'happy': 'happy', 'sad': 'sad', 'angry': 'chill',
         }
-        spotify_query = spotify_query_map.get(mood, 'pop')
+        spotify_genre = spotify_genre_map.get(mood, 'pop')
         spotify_res = requests.get(
-            f"https://api.spotify.com/v1/search?q={spotify_query}&type=track&limit=1",
+            f"https://api.spotify.com/v1/recommendations?limit=1&seed_genres={spotify_genre}",
             headers=headers
         ).json()
-        track = spotify_res['tracks']['items'][0]
+        track = spotify_res['tracks'][0]
         recommendations['music'] = {
             "title": track['name'],
             "artist": track['artists'][0]['name'],
@@ -222,87 +225,23 @@ def recommend():
         logging.error(f"Spotify API Error: {e}")
         recommendations['music'] = {"title": "Could not fetch music", "artist": "", "link": "#"}
 
-    # Quote Recommendations (simple, but effective)
+    # Quote Recommendations
     quote_map = {
         'joy': {"text": "The purpose of our lives is to be happy.", "author": "Dalai Lama"},
         'sadness': {"text": "The wound is the place where the Light enters you.", "author": "Rumi"},
         'anger': {"text": "For every minute you remain angry, you give up sixty seconds of peace of mind.", "author": "Ralph Waldo Emerson"},
         'optimism': {"text": "The best way to predict the future is to create it.", "author": "Peter Drucker"},
+        'love': {"text": "The best thing to hold onto in life is each other.", "author": "Audrey Hepburn"},
+        'fear': {"text": "The only thing we have to fear is fear itself.", "author": "Franklin D. Roosevelt"},
+        'surprise': {"text": "The world is full of magical things, patiently waiting for our senses to grow sharper.", "author": "W.B. Yeats"},
         'happy': {"text": "The purpose of our lives is to be happy.", "author": "Dalai Lama"},
         'sad': {"text": "The wound is the place where the Light enters you.", "author": "Rumi"},
         'angry': {"text": "For every minute you remain angry, you give up sixty seconds of peace of mind.", "author": "Ralph Waldo Emerson"},
     }
     recommendations['quote'] = quote_map.get(mood, {"text": "Be the change you wish to see in the world.", "author": "Mahatma Gandhi"})
 
-
     return jsonify(recommendations)
 
-import gradio as gr
-
-# Emoji map (same as your React app)
-emotionEmojiMap = {
-    "joy": "😊", "sadness": "😢", "anger": "😠", "optimism": "🙂",
-    "love": "❤️", "fear": "😨", "disgust": "🤢", "surprise": "😲", "neutral": "🤖",
-    "happy": "😊", "sad": "😢", "angry": "😠",
-}
-
-def detect_text_emotion(message):
-    """Use HuggingFace model to detect dominant emotion from text"""
-    try:
-        text_emotion_model = get_text_emotion_model()
-        if text_emotion_model:
-            results = text_emotion_model(message)
-            if results and len(results[0]) > 0:
-                return results[0][0]["label"]
-    except Exception as e:
-        logging.error(f"Emotion detection error: {e}")
-    return "neutral"
-
-def gradio_chatbot(message, history=[]):
-    # Step 1: Detect emotion
-    detected_emotion = detect_text_emotion(message)
-    emoji = emotionEmojiMap.get(detected_emotion, "🤖")
-
-    # Step 2: Build system prompt
-    system_prompt = f"You are an emotion-adaptive chatbot. The user is currently feeling {detected_emotion}. Respond with empathy."
-
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-        payload = {
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": f"{system_prompt}\n\n{message}"}]
-                }
-            ]
-        }
-        r = requests.post(url, json=payload)
-        r.raise_for_status()
-        obj = r.json()
-
-        reply = obj["candidates"][0]["content"]["parts"][0]["text"]
-
-        # Step 3: Return reply with emotion emoji
-        return f"{emoji} {reply}"
-
-    except Exception as e:
-        logging.error(f"Gemini API error: {e}")
-        return "I'm having trouble connecting right now."
-
-with gr.Blocks() as demo:
-    gr.Markdown("## 🌟 Emotion-Adaptive Chatbot (Gradio Demo)")
-    chatbot_ui = gr.ChatInterface(fn=gradio_chatbot)
-
 if __name__ == "__main__":
-    # Run Flask in one process
-    import threading
-
     def run_flask():
-        app.run(host="0.0.0.0", port=5000, debug=True)
-
-    threading.Thread(target=run_flask).start()
-    # Run Gradio in another
-    demo.launch(server_name="0.0.0.0", server_port=7860)
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+        app.run(port=5000, debug=True)  

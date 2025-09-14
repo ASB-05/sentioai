@@ -1,16 +1,36 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bot, Send } from 'lucide-react';
 import './AdaptiveChatbot.css';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
-const FLASK_API_URL = 'http://127.0.0.1:5000';
+const emotionResponses = {
+  happy: "I'm glad to hear that you're happy! What's got you in such a good mood?",
+  sad: "I'm sorry to hear that you're feeling sad. Is there anything I can do to help?",
+  angry: "It sounds like you're angry. It's okay to feel that way. What's on your mind?",
+  neutral: "How are you feeling today?",
+  default: "I see. Tell me more about how you're feeling."
+};
 
-const AdaptiveChatbot = ({ user, db, emotion }) => {
+const emotionKeywords = {
+    happy: ['happy', 'joy', 'excited', 'great', 'good'],
+    sad: ['sad', 'unhappy', 'down', 'depressed'],
+    angry: ['angry', 'mad', 'furious', 'pissed'],
+};
+
+const getEmotionFromMessage = (message) => {
+    const lowerCaseMessage = message.toLowerCase();
+    for (const emotion in emotionKeywords) {
+        if (emotionKeywords[emotion].some(keyword => lowerCaseMessage.includes(keyword))) {
+            return emotion;
+        }
+    }
+    return 'neutral';
+}
+
+const AdaptiveChatbot = ({ emotion }) => {
   const [messages, setMessages] = useState([
     { id: 1, text: "Hello! How are you feeling today?", sender: 'bot', emotion: 'neutral' }
   ]);
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
   const emotionEmojiMap = {
@@ -25,75 +45,21 @@ const AdaptiveChatbot = ({ user, db, emotion }) => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim()) return;
 
     const userMessageText = input;
     const userMessage = { id: Date.now(), text: userMessageText, sender: 'user' };
 
-    const botMessageId = Date.now() + 1;
+    const detectedEmotion = getEmotionFromMessage(userMessageText);
+    const botResponseText = emotionResponses[detectedEmotion] || emotionResponses.default;
+    const botMessage = { id: Date.now() + 1, text: botResponseText, sender: 'bot', emotion: detectedEmotion };
+
     setMessages(prev => [
       ...prev,
       userMessage,
-      { id: botMessageId, text: '', sender: 'bot', emotion: 'neutral' }
+      botMessage
     ]);
     setInput('');
-    setIsLoading(true);
-
-    try {
-      const response = await fetch(`${FLASK_API_URL}/chat_with_emotion`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessageText, emotion })
-      });
-
-      if (!response.ok || !response.body) {
-        throw new Error('Network response was not ok.');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let finalBotText = '';
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-
-        // ✅ Stop if [DONE] is received
-        if (chunk.includes("[DONE]")) break;
-
-        finalBotText += chunk;
-
-        // Update bot's message progressively
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === botMessageId ? { ...msg, text: msg.text + chunk } : msg
-          )
-        );
-      }
-
-      // Save to Firestore
-      await addDoc(collection(db, "sentio_public_sentiment"), {
-        userId: user.uid,
-        email: user.email,
-        analysisType: 'chat',
-        userMessage: userMessageText,
-        botResponse: finalBotText,
-        detectedEmotion: emotion || 'text-analyzed',
-        createdAt: serverTimestamp(),
-      });
-
-    } catch (error) {
-      console.error("Chat error:", error);
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id === botMessageId ? { ...msg, text: "Sorry, I'm having trouble connecting. Please try again." } : msg
-        )
-      );
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   return (
@@ -110,8 +76,6 @@ const AdaptiveChatbot = ({ user, db, emotion }) => {
                 </span>
               )}
               {msg.text}
-              {isLoading && msg.id === messages[messages.length - 1].id &&
-                <span className="blinking-cursor"></span>}
             </div>
           </div>
         ))}
@@ -123,9 +87,8 @@ const AdaptiveChatbot = ({ user, db, emotion }) => {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type your message..."
-          disabled={isLoading}
         />
-        <button type="submit" disabled={isLoading}><Send /></button>
+        <button type="submit"><Send /></button>
       </form>
     </div>
   );
