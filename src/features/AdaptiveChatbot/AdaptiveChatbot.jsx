@@ -6,7 +6,7 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 const FLASK_API_URL = 'http://127.0.0.1:5000';
 
-const AdaptiveChatbot = ({ user, db }) => {
+const AdaptiveChatbot = ({ user, db, emotion }) => {
     const [messages, setMessages] = useState([{ id: 1, text: "Hello! How are you feeling today?", sender: 'bot', emotion: 'neutral' }]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -14,7 +14,8 @@ const AdaptiveChatbot = ({ user, db }) => {
 
     const emotionEmojiMap = {
         joy: '😊', sadness: '😢', anger: '😠', optimism: '🙂',
-        love: '❤️', fear: '😨', disgust: '🤢', surprise: '😲', neutral: '🤖'
+        love: '❤️', fear: '😨', disgust: '🤢', surprise: '😲', neutral: '🤖',
+        happy: '😊', sad: '😢', angry: '😠',
     };
 
     useEffect(() => {
@@ -31,7 +32,7 @@ const AdaptiveChatbot = ({ user, db }) => {
         setIsLoading(true);
 
         try {
-            const res = await axios.post(`${FLASK_API_URL}/chat_with_emotion`, { message: input });
+            const res = await axios.post(`${FLASK_API_URL}/chat_with_emotion`, { message: input, emotion: emotion });
             const { bot_response, detected_emotion } = res.data;
             const botMessage = { id: Date.now() + 1, text: bot_response, sender: 'bot', emotion: detected_emotion };
             setMessages(prev => [...prev, botMessage]);
