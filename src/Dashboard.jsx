@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { signOut } from "firebase/auth";
 import { Mic, MessageSquare, Music, BarChart2, Menu, X, Smile } from 'lucide-react';
 
-// Corrected and simplified import paths
 import VoiceAnalysis from './features/VoiceAnalysis';
 import AdaptiveChatbot from './features/AdaptiveChatbot';
 import MoodRecommender from './features/MoodRecommender';
@@ -14,6 +13,33 @@ const Dashboard = ({ user, auth, db, storage }) => {
     const [activePage, setActivePage] = useState('face');
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [emotion, setEmotion] = useState(null);
+
+    const videoRef = useRef(null); // Create a ref for the video element
+
+    // List of your video files
+    const videos = [
+        '/videos/cherry.mp4',
+        '/videos/cloud.mp4',
+        '/videos/greenary.mp4',
+        '/videos/ocean.mp4',
+        '/videos/sunflower.mp4',
+        '/videos/waterfall.mp4'
+    ];
+
+    const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+
+    const handleVideoEnded = () => {
+        setCurrentVideoIndex((prevIndex) => (prevIndex + 1) % videos.length);
+    };
+    
+    // This effect runs when the video index changes
+    useEffect(() => {
+        if (videoRef.current) {
+            // When the index changes, load and play the new video source
+            videoRef.current.load();
+            videoRef.current.play().catch(error => console.error("Error attempting to play video:", error));
+        }
+    }, [currentVideoIndex]);
 
 
     const handleSignOut = () => signOut(auth).catch(e => console.error("Sign out error", e));
@@ -38,8 +64,9 @@ const Dashboard = ({ user, auth, db, storage }) => {
     return (
         <div id="dashboard-root">
             <div className="video-overlay"></div>
-             <video className="video-bg" autoPlay loop muted playsInline>
-                <source src="https://static.videezy.com/system/resources/previews/000/041/229/original/futuristic-plexus-background.mp4" type="video/mp4" />
+             {/* We removed the 'key' prop and added the 'ref' */}
+             <video ref={videoRef} className="video-bg" autoPlay muted playsInline onEnded={handleVideoEnded}>
+                <source src={videos[currentVideoIndex]} type="video/mp4" />
             </video>
 
             <header className="dashboard-header">
