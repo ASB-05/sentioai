@@ -110,3 +110,17 @@
         transform: scale(1.0);
     }
 }
+.blinking-cursor {
+    display: inline-block;
+    width: 8px;
+    height: 1.2rem;
+    background-color: #ccc;
+    animation: blink 1s step-end infinite;
+    margin-left: 4px;
+    vertical-align: bottom;
+}
+
+@keyframes blink {
+    from, to { background-color: transparent }
+    50% { background-color: #ccc; }
+}

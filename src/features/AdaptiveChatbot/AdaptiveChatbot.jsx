@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import axios from 'axios';
 import { Bot, Send } from 'lucide-react';
 import './AdaptiveChatbot.css';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
@@ -24,32 +23,65 @@ const AdaptiveChatbot = ({ user, db, emotion }) => {
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!input.trim()) return;
+        if (!input.trim() || isLoading) return;
 
-        const userMessage = { id: Date.now(), text: input, sender: 'user' };
-        setMessages(prev => [...prev, userMessage]);
+        const userMessageText = input;
+        const userMessage = { id: Date.now(), text: userMessageText, sender: 'user' };
+        
+        const botMessageId = Date.now() + 1;
+        setMessages(prev => [
+            ...prev,
+            userMessage,
+            { id: botMessageId, text: '', sender: 'bot', emotion: 'neutral' }
+        ]);
         setInput('');
         setIsLoading(true);
 
         try {
-            const res = await axios.post(`${FLASK_API_URL}/chat_with_emotion`, { message: input, emotion: emotion });
-            const { bot_response, detected_emotion } = res.data;
-            const botMessage = { id: Date.now() + 1, text: bot_response, sender: 'bot', emotion: detected_emotion };
-            setMessages(prev => [...prev, botMessage]);
+            const response = await fetch(`${FLASK_API_URL}/chat_with_emotion`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: userMessageText, emotion: emotion }),
+            });
+
+            if (!response.ok || !response.body) {
+                throw new Error('Network response was not ok.');
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let finalBotText = '';
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                finalBotText += chunk; // We still build the full string for Firestore
+                
+                // --- THIS IS THE FIX ---
+                // This state update is now self-contained.
+                // It uses the previous message's text and appends the new chunk.
+                setMessages(prev => prev.map(msg => 
+                    msg.id === botMessageId ? { ...msg, text: msg.text + chunk } : msg
+                ));
+            }
 
             await addDoc(collection(db, "sentio_public_sentiment"), {
                 userId: user.uid,
                 email: user.email,
                 analysisType: 'chat',
-                userMessage: input,
-                botResponse: bot_response,
-                detectedEmotion: detected_emotion,
+                userMessage: userMessageText,
+                botResponse: finalBotText,
+                detectedEmotion: emotion || 'text-analyzed',
                 createdAt: serverTimestamp(),
             });
 
         } catch (error) {
-            const errorMessage = { id: Date.now() + 1, text: "Sorry, I'm having trouble connecting. Please try again.", sender: 'bot', emotion: 'neutral' };
-            setMessages(prev => [...prev, errorMessage]);
+            console.error("Chat error:", error);
+            setMessages(prev => prev.map(msg =>
+                msg.id === botMessageId ? { ...msg, text: "Sorry, I'm having trouble connecting. Please try again." } : msg
+            ));
         } finally {
             setIsLoading(false);
         }
@@ -64,21 +96,15 @@ const AdaptiveChatbot = ({ user, db, emotion }) => {
                     <div key={msg.id} className={`chat-message ${msg.sender}`}>
                         <div className="message-bubble">
                             {msg.sender === 'bot' && (
-                                <span className="emotion-badge" title={`Detected Emotion: ${msg.emotion}`}>
-                                    {emotionEmojiMap[msg.emotion] || '🤖'}
+                                <span className="emotion-badge" title={`Detected Emotion: ${emotion || msg.emotion}`}>
+                                    {emotionEmojiMap[emotion || msg.emotion] || '🤖'}
                                 </span>
                             )}
                             {msg.text}
+                            {isLoading && msg.id === messages[messages.length - 1].id && <span className="blinking-cursor"></span>}
                         </div>
                     </div>
                 ))}
-                {isLoading && (
-                    <div className="chat-message bot">
-                        <div className="message-bubble typing-indicator">
-                           <span></span><span></span><span></span>
-                        </div>
-                    </div>
-                )}
                 <div ref={messagesEndRef} />
             </div>
             <form className="chat-input-form" onSubmit={handleSendMessage}>
