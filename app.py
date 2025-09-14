@@ -9,16 +9,19 @@ import json
 import cv2
 import numpy as np
 from flask import Response, stream_with_context
+from dotenv import load_dotenv 
+
+load_dotenv()
 # --- CONFIGURATION ---
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # --- API KEYS (Replace with your actual keys) ---
-OPENROUTER_API_KEY="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"  # <-- IMPORTANT: REPLACE THIS
-YOUTUBE_API_KEY = "AIzaSyD-iWwttpmz_T-agp9OhTTESb5OUwMuG5A"
-SPOTIFY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID"
-SPOTIFY_CLIENT_SECRET = "YOUR_SPOTIFY_CLIENT_SECRET"
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
 
 # --- MODEL LOADING (Lazy Loading) ---
