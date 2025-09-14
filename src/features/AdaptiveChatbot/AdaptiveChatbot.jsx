@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bot, Send } from 'lucide-react';
 import './AdaptiveChatbot.css';
 
-// Replace with your actual OpenRouter API Key
+
 const OPENROUTER_API_KEY = process.env.REACT_APP_OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
@@ -35,11 +35,11 @@ const AdaptiveChatbot = ({ emotion }) => {
     setInput('');
     setIsLoading(true);
 
-    // Add a placeholder for the bot's response
+    
     setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
 
     try {
-      // The system prompt instructs the AI on its personality and current context
+      
       const systemPrompt = {
         role: 'system',
         content: `You are SentioAI, a friendly and empathetic assistant. Respond with kindness and understanding. The user's currently detected emotion is: ${emotion || 'not detected'}. Adapt your tone and response to be mindful of this emotion.`
@@ -52,7 +52,7 @@ const AdaptiveChatbot = ({ emotion }) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: "openai/gpt-3.5-turbo", // You can change this to your preferred model
+          model: "openai/gpt-3.5-turbo", 
           messages: [systemPrompt, ...newMessages],
           stream: true
         })
@@ -63,7 +63,7 @@ const AdaptiveChatbot = ({ emotion }) => {
       }
 
       const reader = response.body.getReader();
-      const decoder = new TextDecoder(); // <-- THIS IS THE FIX
+      const decoder = new TextDecoder();
 
       while (true) {
         const { value, done } = await reader.read();
@@ -89,7 +89,7 @@ const AdaptiveChatbot = ({ emotion }) => {
                         );
                     }
                 } catch (error) {
-                    // Ignore parsing errors for incomplete JSON
+                    
                 }
             }
         }

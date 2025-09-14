@@ -1,116 +1,87 @@
-/* General container for the entire page */
-#auth-root {
-    /* Flexbox properties to ensure the auth box is always centered */
+
+.auth-page-wrapper {
     display: flex;
-    justify-content: center; /* Horizontally centers content */
-    align-items: center;   /* Vertically centers content */
+    justify-content: center;
+    align-items: center;
     min-height: 100vh;
     width: 100%;
-    /* --- NEW: Layered Background --- */
-    /* Layer 1: Animated Gradient (bottom layer) */
-    background: linear-gradient(-45deg, #1e1b4b, #312e81, #4f46e5, #3b0764);
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(-45deg, rgba(30, 27, 75, 0.7), rgba(49, 46, 129, 0.7), rgba(95, 93, 127, 0.7), rgba(139, 131, 145, 0.7));
     background-size: 400% 400%;
     animation: gradientBG 15s ease infinite;
+    position: relative;
     padding: 1rem;
-    overflow: hidden; /* Prevents scrollbars from the GIF */
-    position: relative; /* Needed for the pseudo-element */
+    overflow: hidden;
 }
 
-/* --- NEW: GIF Background Overlay --- */
-#auth-root::before {
+.auth-page-wrapper::before {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    /* You can replace this with any GIF URL */
-    background-image: url('/public/login.gif');
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: url('https://i.pinimg.com/originals/db/05/a0/db05a03b2adcfedd15c8b91e48cb99a4.gif');
     background-size: cover;
     background-position: center;
-    opacity: 0.1; /* Makes the GIF subtle */
-    mix-blend-mode: screen; /* Blends the GIF nicely with the gradient */
+    opacity: 0.15;
+    mix-blend-mode: screen;
     z-index: 1;
 }
 
-/* Keyframe animation for the background gradient */
+
 @keyframes gradientBG {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
     100% { background-position: 0% 50%; }
 }
 
-/* The main authentication card with the glass effect */
+/* Glassmorphic card */
 .auth-container {
-    background: rgba(17, 24, 39, 0.6); /* Darker, less transparent background */
-    backdrop-filter: blur(20px); /* Increased blur for a more premium feel */
+    background: rgba(17, 24, 39, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 24px;
-    padding: 3rem;
+    padding: 2rem 3rem 3rem;
     width: 100%;
     max-width: 450px;
-    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
     text-align: center;
     color: #e0e0e0;
-    /* --- NEW: Added for the GIF overlay --- */
     z-index: 2;
-    /* --- NEW: Subtle 3D hover effect --- */
     transition: transform 0.4s ease, box-shadow 0.4s ease;
 }
 
 .auth-container:hover {
     transform: perspective(1000px) rotateX(2deg) rotateY(-2deg) scale(1.02);
-    box-shadow: 0 16px 50px 0 rgba(0, 0, 0, 0.6);
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6);
 }
 
-.auth-header .logo {
-    font-size: 2.8rem; /* Slightly larger */
-    font-weight: 800; /* Bolder */
-    color: #ffffff;
+/* Headings */
+.auth-container h1 {
+    font-size: 2rem;
     margin-bottom: 0.5rem;
 }
 
-.auth-header .tagline {
+.auth-container p {
     font-size: 1rem;
     color: #c7d2fe;
-    margin-bottom: 2.5rem;
+    margin-bottom: 2rem;
 }
 
-/* Styling for the input fields and their container */
+/* Input group with floating labels */
 .input-group {
-    margin-bottom: 1.5rem;
-    position: relative; /* For floating label animation */
-}
-
-/* --- NEW: Floating Label Animation --- */
-.input-group label {
-    position: absolute;
-    top: 0.8rem;
-    left: 1rem;
-    font-size: 1rem;
-    color: #a5b4fc;
-    pointer-events: none;
-    transition: all 0.2s ease-out;
+    position: relative;
+    margin-bottom: 1.8rem;
 }
 
 .input-group input {
     width: 100%;
-    padding: 0.8rem 1rem;
+    padding: 0.9rem 1rem;
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 12px;
-    color: #ffffff;
+    color: #fff;
     font-size: 1rem;
     transition: all 0.3s ease;
-}
-
-/* --- NEW: Animation trigger for the label --- */
-.input-group input:focus + label,
-.input-group input:not(:placeholder-shown) + label {
-    top: -1.4rem;
-    left: 0.2rem;
-    font-size: 0.8rem;
-    color: #818cf8;
 }
 
 .input-group input:focus {
@@ -119,24 +90,42 @@
     box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.4);
 }
 
-/* Button styling */
+.input-group label {
+    position: absolute;
+    top: 0.9rem;
+    left: 1rem;
+    font-size: 1rem;
+    color: #a5b4fc;
+    pointer-events: none;
+    transition: all 0.2s ease-out;
+}
+
+.input-group input:focus + label,
+.input-group input:not(:placeholder-shown) + label {
+    top: -0.7rem;
+    left: 0.8rem;
+    font-size: 0.75rem;
+    color: #818cf8;
+    background: #191E3A;
+    padding: 0 5px;
+}
+
+/* Buttons */
 .btn-auth {
     width: 100%;
     padding: 0.9rem;
     border: none;
     border-radius: 12px;
     background: #6366f1;
-    color: #ffffff;
+    color: #fff;
     font-size: 1.1rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
     margin-bottom: 1.5rem;
-    /* --- NEW: Pulsing animation --- */
     animation: pulse 2s infinite;
 }
 
-/* --- NEW: Pulse keyframes --- */
 @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
     70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
@@ -147,16 +136,66 @@
     background-color: #4f46e5;
     transform: translateY(-3px) scale(1.02);
     box-shadow: 0 6px 25px rgba(99, 102, 241, 0.5);
-    animation-play-state: paused; /* Pause the pulse on hover */
+    animation-play-state: paused;
 }
 
 .btn-auth:disabled {
     background-color: #3730a3;
     cursor: not-allowed;
-    animation: none; /* Disable animation when button is disabled */
+    animation: none; 
 }
 
-/* Link to switch between login/signup */
+
+.separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: #a5b4fc;
+    margin: 1.5rem 0;
+    font-size: 0.8rem;
+}
+
+.separator::before,
+.separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.separator:not(:empty)::before {
+    margin-right: .5em;
+}
+
+.separator:not(:empty)::after {
+    margin-left: .5em;
+}
+
+
+.btn-google {
+    width: 100%;
+    padding: 0.8rem;
+    border-radius: 12px;
+    background: #f8f9fa; 
+    color: #3c4043; 
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-bottom: 1.5rem;
+    border: 1px solid #dadce0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px; 
+}
+
+.btn-google:hover {
+    background: #f1f3f4;
+    border-color: #c6c9ce;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Toggle button */
 .toggle-auth {
     background: none;
     border: none;
@@ -164,26 +203,27 @@
     cursor: pointer;
     font-size: 0.9rem;
     transition: color 0.3s ease;
+    padding: 5px;
 }
 
 .toggle-auth:hover {
-    text-decoration: none;
-    color: #ffffff;
+    text-decoration: underline;
+    color: #fff;
 }
 
-/* Error message styling */
+/* Error message */
 .error-message {
     color: #fca5a5;
     background-color: rgba(239, 68, 68, 0.2);
     padding: 0.8rem;
     border-radius: 8px;
-    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
     font-size: 0.9rem;
-    /* --- NEW: Fade-in animation for error */
     animation: fadeIn 0.5s ease-out;
+    text-align: left;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }

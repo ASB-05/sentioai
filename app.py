@@ -10,8 +10,6 @@ import cv2
 import numpy as np
 import base64
 from dotenv import load_dotenv
-import gradio as gr
-import threading
 
 load_dotenv()
 
@@ -26,9 +24,9 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
-print("Gemini Key Loaded:", bool(GEMINI_API_KEY))  # Avoid printing sensitive keys
+print("Gemini Key Loaded:", bool(GEMINI_API_KEY))  
 
-# --- MODEL LOADING (Lazy Loading) ---
+
 models = {}
 
 def get_speech_model():
@@ -43,15 +41,8 @@ def get_speech_model():
     return models["speech"]
 
 def get_text_emotion_model():
-    if "text_emotion" not in models:
-        try:
-            logging.info("Loading text emotion classification model...")
-            models["text_emotion"] = pipeline("text-classification", model="cardiffnlp/twitter-roberta-base-emotion-latest", top_k=None)
-            logging.info("Text emotion model loaded successfully.")
-        except Exception as e:
-            logging.error(f"Error loading text emotion model: {e}", exc_info=True)
-            models["text_emotion"] = None
-    return models["text_emotion"]
+
+    pass
 
 # --- API ENDPOINTS ---
 
@@ -71,6 +62,7 @@ def analyze_voice():
         if os.path.exists(path):
             os.remove(path)
     return jsonify(result)
+
 
 @app.route("/chat_with_emotion", methods=["POST"])
 def chat_with_emotion():
@@ -120,9 +112,9 @@ def chat_with_emotion():
 def analyze_face():
     if 'image' not in request.files:
         return jsonify({"error": "No image file part"}), 400
-    
+
     file = request.files['image']
-    
+
     filestr = file.read()
     npimg = np.frombuffer(filestr, np.uint8)
     img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
@@ -134,7 +126,7 @@ def analyze_face():
             enforce_detection=True,
             detector_backend='retinaface'
         )
-        
+
         if isinstance(analysis, list):
             analysis = analysis[0]
 
@@ -142,7 +134,7 @@ def analyze_face():
         emotion_scores = analysis.get("emotion")
 
         logging.info(f"Facial analysis result: {dominant_emotion}")
-        
+
         return jsonify({
             "dominant_emotion": dominant_emotion,
             "emotion_scores": emotion_scores
@@ -243,5 +235,5 @@ def recommend():
     return jsonify(recommendations)
 
 if __name__ == "__main__":
-    def run_flask():
-        app.run(port=5000, debug=True)  
+
+    app.run(port=5000, debug=True, use_reloader=False)

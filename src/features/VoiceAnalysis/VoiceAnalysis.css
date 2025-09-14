@@ -1,49 +1,143 @@
-.voice-visualizer {
-    border: 1px solid var(--border-dark);
-    border-radius: 8px;
-    margin: 20px auto;
-    background-color: rgba(0,0,0,0.2);
+
+.voice-analysis-container {
+    background-color: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    max-width: 600px;
+    margin: 40px auto;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-align: center;
+    border: 1px solid #e0e0e0;
 }
 
-.results-container {
-    margin-top: 32px;
+.card-header h2 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+.card-header p {
+    margin: 0 0 1.5rem 0;
+    color: #666;
+    font-size: 1rem;
+}
+
+/* Controls and Buttons */
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.control-button {
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: white;
+}
+
+.control-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.control-button.start { background-color: #28a745; }
+.control-button.start:hover:not(:disabled) { background-color: #218838; }
+
+.control-button.stop { background-color: #dc3545; }
+.control-button.stop:hover:not(:disabled) { background-color: #c82333; }
+
+.control-button.analyze { background-color: #007bff; }
+.control-button.analyze:hover:not(:disabled) { background-color: #0056b3; }
+
+/* Audio Player */
+.audio-player-container {
+    margin: 1.5rem 0;
+}
+.audio-player-container audio {
+    width: 100%;
+}
+
+/* Analysis Result Section */
+.analysis-result {
+    margin-top: 1.5rem;
     text-align: left;
 }
 
-.results-grid {
+.analysis-result h3 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+.dominant-emotion {
+    text-align: center;
+    font-size: 1.2rem;
+    color: #555;
+    margin-bottom: 1.5rem;
+    padding: 0.5rem;
+    background-color: #f0f8ff;
+    border-radius: 8px;
+}
+
+.emotion-scores-container {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 0.8rem;
 }
 
-.result-item {
-    display: grid;
-    grid-template-columns: 80px 1fr 60px;
+.emotion-score-item {
+    display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 1rem;
 }
 
-.label {
-    font-weight: 600;
-    text-transform: capitalize;
+.emotion-label {
+    flex-basis: 80px; 
+    font-weight: 500;
+    color: #444;
 }
 
 .score-bar-container {
-    width: 100%;
-    background-color: rgba(0,0,0,0.3);
-    border-radius: 4px;
+    flex-grow: 1;
+    background-color: #e9ecef;
+    border-radius: 20px;
+    height: 16px;
     overflow: hidden;
 }
 
 .score-bar {
-    height: 16px;
-    background-color: var(--primary-color);
-    border-radius: 4px;
-    transition: width 0.3s ease-in-out;
+    height: 100%;
+    border-radius: 20px;
+    transition: width 0.5s ease-in-out;
 }
 
-.score {
-    font-weight: 600;
-    color: var(--text-light);
+.emotion-percentage {
+    flex-basis: 60px; 
     text-align: right;
+    font-weight: 500;
+    color: #333;
+}
+
+/* Emotion Colors for the bars */
+.emotion-hap { background-color: #28a745; } /* Happy - Green */
+.emotion-sad { background-color: #007bff; } /* Sad - Blue */
+.emotion-ang { background-color: #dc3545; } /* Anger - Red */
+.emotion-neu { background-color: #6c757d; } /* Neutral - Gray */
+
+
+.error-message {
+    color: #D8000C;
+    background-color: #FFD2D2;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
 }
