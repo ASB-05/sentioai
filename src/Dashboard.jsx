@@ -37,7 +37,15 @@ const Dashboard = ({ user, auth, db, storage }) => {
         if (videoRef.current) {
             // When the index changes, load and play the new video source
             videoRef.current.load();
-            videoRef.current.play().catch(error => console.error("Error attempting to play video:", error));
+            const playPromise = videoRef.current.play();
+            if (playPromise !== undefined) {
+                 playPromise.catch(error => {
+                    // This check specifically ignores the AbortError
+                    if (error.name !== 'AbortError') {
+                        console.error("Error attempting to play video:", error);
+                    }
+                });
+            }
         }
     }, [currentVideoIndex]);
 
