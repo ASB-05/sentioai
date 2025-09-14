@@ -20,6 +20,18 @@
 .chat-message {
     display: flex;
     max-width: 80%;
+    animation: messageFadeIn 0.5s ease-in-out;
+}
+
+@keyframes messageFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .chat-message.user {
@@ -35,6 +47,11 @@
     padding: 10px 15px;
     border-radius: 18px;
     position: relative;
+    transition: transform 0.2s ease;
+}
+
+.message-bubble:hover {
+    transform: scale(1.02);
 }
 
 .chat-message.user .message-bubble {
@@ -83,6 +100,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: background-color 0.3s ease;
+}
+
+.chat-input-form button:hover {
+    background-color: #2980b9;
 }
 
 .typing-indicator span {

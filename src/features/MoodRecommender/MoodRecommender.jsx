@@ -1,76 +1,94 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Music, Youtube, Quote } from 'lucide-react';
+import { Music, Video, VideoOff } from 'lucide-react';
 import './MoodRecommender.css';
+import { useEmotionDetection } from '../../hooks/useEmotionDetection';
 
-const FLASK_API_URL = 'http://127.0.0.1:5000';
+const moodPlaylists = {
+    happy: { id: '37i9dQZF1DX3rxVfibe1L0', name: 'Happy Hits!' },
+    sad: { id: '37i9dQZF1DX7qK8ma5wgG1', name: 'Sad Indie' },
+    neutral: { id: '37i9dQZF1DX4sWSpwq3LiO', name: 'Lofi Beats' },
+    angry: { id: '37i9dQZF1DWX83zEwxtool', name: 'Rock Anthems' },
+    surprised: { id: '37i9dQZF1DX2d2cf3gM7LE', name: 'Pop Rising' },
+    fearful: { id: '37i9dQZF1DWZrc3MOf54p6', name: 'Calming Acoustic' },
+    disgusted: { id: '37i9dQZF1DWYBO1MoTDLJ3', name: 'Punk Essentials' }
+};
 
-const MoodRecommender = ({ emotion }) => {
-    const [mood, setMood] = useState('joy');
-    const [recommendations, setRecommendations] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
+const MoodRecommender = () => { 
+    const [activePlaylist, setActivePlaylist] = useState(null);
+    const {
+        videoRef,
+        canvasRef,
+        modelsLoaded,
+        isDetecting,
+        detectedEmotion,
+        startDetection,
+        stopDetection,
+        handleVideoPlay,
+    } = useEmotionDetection();
 
     useEffect(() => {
-        if (emotion) {
-            setMood(emotion);
+        if (detectedEmotion && moodPlaylists[detectedEmotion.name]) {
+            setActivePlaylist(moodPlaylists[detectedEmotion.name]);
+        } else {
+            setActivePlaylist(null);
         }
-    }, [emotion]);
+    }, [detectedEmotion]); // Effect now depends on the emotion from our hook
 
+    // Cleanup when component unmounts
     useEffect(() => {
-        const fetchRecommendations = async () => {
-            setIsLoading(true);
-            try {
-                const res = await axios.post(`${FLASK_API_URL}/recommend`, { mood });
-                setRecommendations(res.data);
-            } catch (error) {
-                console.error("Error fetching recommendations:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchRecommendations();
-    }, [mood]);
+        return () => stopDetection();
+    }, [stopDetection]);
 
+    const handleToggleDetection = () => {
+        if (isDetecting) {
+            stopDetection();
+        } else {
+            startDetection();
+        }
+    };
+    
     return (
-        <div className="feature-card">
-             <h1><Music className="inline-block mr-2" /> Mood-Driven Recommender</h1>
-             <p>Select your current mood or let the face analysis detect it to get curated content recommendations.</p>
-             <div className="mood-selector">
-                <select value={mood} onChange={e => setMood(e.target.value)}>
-                    <option value="joy">😊 Joyful</option>
-                    <option value="sadness">😢 Sad</option>
-                    <option value="anger">😠 Angry</option>
-                    <option value="optimism">🙂 Optimistic</option>
-                    <option value="happy">😊 Happy</option>
-                    <option value="sad">😢 Sad</option>
-                    <option value="angry">😠 Angry</option>
-                </select>
-             </div>
-             {isLoading ? <p>Loading recommendations...</p> : recommendations && (
-                 <div className="recommendations-grid">
-                    <div className="rec-card">
-                        <h3><Music size={20} className="inline-block mr-2" /> Music</h3>
-                        <p><strong>{recommendations.music.title}</strong> by {recommendations.music.artist}</p>
-                        <a href={recommendations.music.link} target="_blank" rel="noopener noreferrer" className="btn btn-rec">Listen on Spotify</a>
-                    </div>
-                    <div className="rec-card">
-                        <h3><Youtube size={20} className="inline-block mr-2" /> Video</h3>
-                        <p><strong>{recommendations.video.title}</strong></p>
+        <div className="feature-card mood-recommender">
+            <div className="recommender-header">
+                <Music size={28} />
+                <h1>Mood-Based Song Recommender</h1>
+            </div>
+
+            <div className="detection-controls">
+                <button onClick={handleToggleDetection} className={`btn ${isDetecting ? 'btn-stop' : 'btn-start'}`} disabled={!modelsLoaded}>
+                    {isDetecting ? <VideoOff className="mr-2" /> : <Video className="mr-2" />}
+                    {isDetecting ? 'Stop Camera' : 'Start Camera to Detect Mood'}
+                </button>
+                {!modelsLoaded && <p className="status">Loading AI models, please wait...</p>}
+            </div>
+
+            {isDetecting && (
+                <div className="video-container-recommender">
+                    <video ref={videoRef} onPlay={handleVideoPlay} autoPlay muted playsInline />
+                    <canvas ref={canvasRef} />
+                </div>
+            )}
+            
+            {detectedEmotion && activePlaylist ? (
+                <div className="playlist-container">
+                    <p>You seem to be feeling <strong className="emotion-highlight">{detectedEmotion.name}</strong>. We recommend:</p>
+                    <h2>{activePlaylist.name}</h2>
+                    <div className="spotify-embed">
                         <iframe
-                            className="youtube-embed"
-                            src={`https://www.youtube.com/embed/${recommendations.video.videoId}`}
-                            title={recommendations.video.title}
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
+                            key={activePlaylist.id} // Add key to force re-render on playlist change
+                            title="Spotify Playlist"
+                            src={`https://open.spotify.com/embed/playlist/${activePlaylist.id}?utm_source=generator&theme=0`}
+                            width="100%"
+                            height="352"
+                            frameBorder="0"
+                            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                            loading="lazy"
                         ></iframe>
                     </div>
-                    <div className="rec-card">
-                        <h3><Quote size={20} className="inline-block mr-2" /> Quote</h3>
-                        <p className="quote-text">"{recommendations.quote.text}"</p>
-                        <footer>- {recommendations.quote.author}</footer>
-                    </div>
-                 </div>
-             )}
+                </div>
+            ) : isDetecting && (
+                <p className="status">Point the camera at your face...</p>
+            )}
         </div>
     );
 };

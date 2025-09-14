@@ -49,7 +49,7 @@ const Dashboard = ({ user, auth, db, storage }) => {
             case 'face': return <FaceAnalysis user={user} db={db} onEmotionChange={setEmotion} />;
             case 'voice': return <VoiceAnalysis user={user} db={db} storage={storage} />;
             case 'chatbot': return <AdaptiveChatbot user={user} db={db} emotion={emotion} />;
-            case 'recommender': return <MoodRecommender emotion={emotion} />;
+            case 'recommender': return <MoodRecommender />;
             case 'sentiment': return <SentimentDashboard db={db} user={user} />;
             default: return <FaceAnalysis user={user} db={db} onEmotionChange={setEmotion} />;
         }
