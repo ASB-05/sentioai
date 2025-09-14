@@ -54,3 +54,101 @@
 .recharts-text, .recharts-legend-item-text {
     fill: var(--text-muted);
 }
+
+.journal-section {
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 1px solid var(--border-dark);
+}
+
+.journal-form {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.journal-form textarea {
+    flex-grow: 1;
+    background-color: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-dark);
+    color: white;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 1rem;
+    resize: vertical;
+}
+
+.journal-entries {
+    margin-top: 30px;
+    text-align: left;
+}
+
+.journal-entry {
+    background-color: rgba(0,0,0,0.2);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border-left: 3px solid var(--primary-color);
+    transition: all 0.5s ease-out;
+}
+
+.entry-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.entry-text {
+    margin: 0;
+    font-style: italic;
+}
+
+.entry-date {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.burn-btn {
+    background: transparent;
+    border: 1px solid var(--danger-color);
+    color: var(--danger-color);
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.3s ease;
+}
+
+.burn-btn:hover {
+    background: var(--danger-color);
+    color: white;
+}
+
+.journal-entry.burned {
+    animation: burn-away 1s forwards;
+}
+
+@keyframes burn-away {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+        filter: blur(0);
+    }
+    50% {
+        opacity: 0.5;
+        filter: blur(4px) grayscale(50%);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.9);
+        filter: blur(8px) grayscale(100%);
+        height: 0;
+        padding: 0;
+        margin-bottom: 0;
+        border: none;
+    }
+}
