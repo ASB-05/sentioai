@@ -4,7 +4,7 @@ import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
-import AuthPage from './features/Auth/AuthPage';  // Create this if not exists (simple login/signup form)
+import AuthPage from './features/Auth/AuthPage';  
 import Dashboard from './Dashboard';
 
 const firebaseConfig = {

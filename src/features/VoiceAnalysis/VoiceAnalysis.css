@@ -1,4 +1,4 @@
-/* General container styling */
+
 .voice-analysis-container {
     background-color: #ffffff;
     border-radius: 16px;
@@ -101,7 +101,7 @@
 }
 
 .emotion-label {
-    flex-basis: 80px; /* Fixed width for labels */
+    flex-basis: 80px; 
     font-weight: 500;
     color: #444;
 }
@@ -121,7 +121,7 @@
 }
 
 .emotion-percentage {
-    flex-basis: 60px; /* Fixed width for percentages */
+    flex-basis: 60px; 
     text-align: right;
     font-weight: 500;
     color: #333;

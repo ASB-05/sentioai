@@ -10,8 +10,6 @@ import cv2
 import numpy as np
 import base64
 from dotenv import load_dotenv
-import gradio as gr
-import threading
 
 load_dotenv()
 
@@ -26,9 +24,9 @@ YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
 SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
 
-print("Gemini Key Loaded:", bool(GEMINI_API_KEY))  # Avoid printing sensitive keys
+print("Gemini Key Loaded:", bool(GEMINI_API_KEY))  
 
-# --- MODEL LOADING (Lazy Loading) ---
+
 models = {}
 
 def get_speech_model():
@@ -43,7 +41,7 @@ def get_speech_model():
     return models["speech"]
 
 def get_text_emotion_model():
-    # ... (rest of your model loading code is fine) ...
+
     pass
 
 # --- API ENDPOINTS ---
@@ -65,7 +63,7 @@ def analyze_voice():
             os.remove(path)
     return jsonify(result)
 
-# ... (rest of your app.py routes are fine) ...
+
 @app.route("/chat_with_emotion", methods=["POST"])
 def chat_with_emotion():
     data = request.json
@@ -237,6 +235,5 @@ def recommend():
     return jsonify(recommendations)
 
 if __name__ == "__main__":
-    # The Gradio interface seems to be for a different purpose, 
-    # so we run Flask directly for the web app backend.
-    app.run(port=5000, debug=True, use_reloader=False) # use_reloader=False is often good for ML models
+
+    app.run(port=5000, debug=True, use_reloader=False)

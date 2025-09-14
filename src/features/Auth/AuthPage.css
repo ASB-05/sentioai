@@ -1,4 +1,4 @@
-/* Wrapper with gradient background and GIF overlay */
+
 .auth-page-wrapper {
     display: flex;
     justify-content: center;
@@ -26,7 +26,7 @@
     z-index: 1;
 }
 
-/* Gradient animation */
+
 @keyframes gradientBG {
     0% { background-position: 0% 50%; }
     50% { background-position: 100% 50%; }
@@ -142,10 +142,10 @@
 .btn-auth:disabled {
     background-color: #3730a3;
     cursor: not-allowed;
-    animation: none; /* Disable animation when button is disabled */
+    animation: none; 
 }
 
-/* --- NEW: Separator Styling --- */
+
 .separator {
     display: flex;
     align-items: center;
@@ -170,13 +170,13 @@
     margin-left: .5em;
 }
 
-/* --- NEW: Google Button Styling --- */
+
 .btn-google {
     width: 100%;
     padding: 0.8rem;
     border-radius: 12px;
-    background: #f8f9fa; /* Light background */
-    color: #3c4043; /* Google's text color */
+    background: #f8f9fa; 
+    color: #3c4043; 
     font-size: 1rem;
     font-weight: 500;
     cursor: pointer;
@@ -186,7 +186,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 10px; /* Space between icon and text */
+    gap: 10px; 
 }
 
 .btn-google:hover {

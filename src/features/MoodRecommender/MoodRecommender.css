@@ -106,11 +106,11 @@
     font-size: 0.9rem;
     font-weight: 500;
     margin: 0;
-    flex-grow: 1; /* Ensures the text area fills space */
+    flex-grow: 1; 
     line-height: 1.4;
 }
 
-/* General Card Styles */
+
 .mood-recommender {
     display: flex;
     flex-direction: column;
@@ -131,7 +131,7 @@
 }
 
 .emotion-highlight {
-    color: #a78bfa; /* A nice purple highlight */
+    color: #a78bfa; 
     font-weight: 600;
     text-transform: capitalize;
 }
@@ -143,16 +143,16 @@
 }
 
 .status.error {
-    color: #fca5a5; /* Light red for errors */
+    color: #fca5a5; 
 }
 
-/* Platform Toggle Buttons */
+
 .platform-toggle {
     display: flex;
     gap: 1rem;
     background-color: rgba(0, 0, 0, 0.3);
     padding: 0.5rem;
-    border-radius: 999px; /* Pill shape */
+    border-radius: 999px; 
 }
 
 .platform-toggle button {
@@ -174,7 +174,7 @@
 
 .platform-toggle button.active {
     background-color: #a78bfa;
-    color: #111827; /* Dark text on active */
+    color: #111827; 
     box-shadow: 0 4px 14px rgba(167, 139, 250, 0.3);
 }
 
@@ -222,7 +222,7 @@
     font-size: 0.9rem;
     font-weight: 500;
     margin: 0;
-    flex-grow: 1; /* Ensures the text area fills space */
+    flex-grow: 1; 
     line-height: 1.4;
 }
 

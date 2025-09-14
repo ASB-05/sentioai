@@ -18,7 +18,7 @@ const searchTerms = {
 };
 
 const MoodRecommender = ({ emotion }) => {
-    const [platform, setPlatform] = useState('spotify'); // 'spotify' or 'youtube'
+    const [platform, setPlatform] = useState('spotify'); 
     const [spotifyToken, setSpotifyToken] = useState(null);
     const [recommendations, setRecommendations] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -55,7 +55,7 @@ const MoodRecommender = ({ emotion }) => {
         getSpotifyToken();
     }, [getSpotifyToken]);
 
-    // --- Fetching Logic ---
+    
     useEffect(() => {
         if (!emotion) {
             setRecommendations([]);
@@ -70,7 +70,7 @@ const MoodRecommender = ({ emotion }) => {
 
             if (platform === 'spotify') {
                 if (!spotifyToken) {
-                    // Don't set an error here, just wait for the token
+                    
                     setIsLoading(false);
                     return;
                 }
