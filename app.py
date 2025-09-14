@@ -18,11 +18,14 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # --- API KEYS (Replace with your actual keys) ---
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
-SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
+from flask import Flask, request, jsonify, Response, stream_with_context
+import os, logging, requests, json
+GEMINI_API_KEY = os.getenv("REACT_APP_GEMINI_API_KEY")
+YOUTUBE_API_KEY = os.getenv("REACT_APP_YOUTUBE_API_KEY")
+SPOTIFY_CLIENT_ID = os.getenv("REACT_APP_SPOTIFY_CLIENT_ID")
+SPOTIFY_CLIENT_SECRET = os.getenv("REACT_APP_SPOTIFY_CLIENT_SECRET")
 
+print("Gemini Key Loaded:", GEMINI_API_KEY)
 
 # --- MODEL LOADING (Lazy Loading) ---
 models = {}
@@ -68,81 +71,49 @@ def analyze_voice():
             os.remove(path)
     return jsonify(result)
 
-@app.route('/chat_with_emotion', methods=['POST'])
+@app.route("/chat_with_emotion", methods=["POST"])
 def chat_with_emotion():
-    text_emotion_model = get_text_emotion_model()
-    if text_emotion_model is None:
-        return jsonify({"error": "Text emotion model is not available."}), 500
+    data = request.json
+    user_message = data.get("message", "")
+    emotion = data.get("emotion", "neutral")
 
-    data = request.get_json()
-    user_message = data.get("message")
-    user_emotion = data.get("emotion", None)
-
-    if not user_message:
-        return jsonify({"error": "No message provided"}), 400
-
-    try:
-        if not user_emotion:
-            emotion_results = text_emotion_model(user_message)
-            dominant_emotion = emotion_results[0][0]['label'] if emotion_results else 'neutral'
-        else:
-            dominant_emotion = user_emotion
-    except Exception:
-        dominant_emotion = 'neutral'
-
-    tone_map = {
-        'joy': 'cheerful and uplifting',
-        'sadness': 'empathetic and comforting',
-        'anger': 'calm and reassuring',
-        'optimism': 'encouraging and upbeat',
-        'love': 'warm and affectionate',
-        'fear': 'soothing and supportive',
-        'happy': 'cheerful and uplifting',
-        'sad': 'empathetic and comforting',
-        'angry': 'calm and reassuring',
-    }
-    tone = tone_map.get(dominant_emotion, 'neutral')
-
-    system_prompt = f"You are SentioAI, an emotionally intelligent assistant. Your user is currently feeling {dominant_emotion}. Respond in a {tone} tone. Keep your responses concise and helpful. When the user is feeling sad or angry, try to be extra supportive and provide some motivational words."
+    system_prompt = f"You are an emotion-adaptive chatbot. The user is currently feeling {emotion}. Respond with empathy."
 
     def generate():
         try:
-            response = requests.post(
-                url="https://openrouter.ai/api/v1/chat/completions",
-                headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}"},
-                stream=True,
-                data=json.dumps({
-                    "model": "google/gemini-flash-1.5",
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_message}
-                    ],
-                    "stream": True
-                })
-            )
-            response.raise_for_status()
-            
-            for line in response.iter_lines():
-                if line:
-                    decoded_line = line.decode('utf-8')
-                    if decoded_line.startswith('data: '):
-                        json_str = decoded_line[6:]
-                        if json_str.strip() == '[DONE]':
-                            break
-                        try:
-                            data = json.loads(json_str)
-                            if 'choices' in data and len(data['choices']) > 0:
-                                delta = data['choices'][0].get('delta', {})
-                                content = delta.get('content')
-                                if content:
-                                    yield content
-                        except json.JSONDecodeError:
-                            continue
-        except Exception as e:
-            logging.error(f"Streaming API Error: {e}")
-            yield "I'm having trouble connecting right now."
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?key={GEMINI_API_KEY}"
 
-    return Response(stream_with_context(generate()), mimetype='text/plain')
+            payload = {
+                "contents": [
+                    {
+                        "role": "user",
+                        "parts": [{"text": f"{system_prompt}\n\n{user_message}"}]
+                    }
+                ]
+            }
+
+            with requests.post(url, json=payload, stream=True) as r:
+                r.raise_for_status()
+
+                for line in r.iter_lines():
+                    if not line:
+                        continue
+                    try:
+                        obj = json.loads(line.decode("utf-8"))
+                        if "candidates" in obj:
+                            parts = obj["candidates"][0]["content"]["parts"]
+                            if parts and "text" in parts[0]:
+                                yield parts[0]["text"]
+                    except Exception as e:
+                        logging.error(f"Parse error: {e}")
+                        continue
+        except Exception as e:
+            logging.error(f"Gemini API streaming error: {e}")
+            yield "I'm having trouble connecting right now."
+        finally:
+            yield "[DONE]"
+
+    return Response(stream_with_context(generate()), mimetype="text/plain")
 
 
 @app.route('/analyze_face', methods=['POST'])
@@ -266,6 +237,72 @@ def recommend():
 
     return jsonify(recommendations)
 
+import gradio as gr
+
+# Emoji map (same as your React app)
+emotionEmojiMap = {
+    "joy": "😊", "sadness": "😢", "anger": "😠", "optimism": "🙂",
+    "love": "❤️", "fear": "😨", "disgust": "🤢", "surprise": "😲", "neutral": "🤖",
+    "happy": "😊", "sad": "😢", "angry": "😠",
+}
+
+def detect_text_emotion(message):
+    """Use HuggingFace model to detect dominant emotion from text"""
+    try:
+        text_emotion_model = get_text_emotion_model()
+        if text_emotion_model:
+            results = text_emotion_model(message)
+            if results and len(results[0]) > 0:
+                return results[0][0]["label"]
+    except Exception as e:
+        logging.error(f"Emotion detection error: {e}")
+    return "neutral"
+
+def gradio_chatbot(message, history=[]):
+    # Step 1: Detect emotion
+    detected_emotion = detect_text_emotion(message)
+    emoji = emotionEmojiMap.get(detected_emotion, "🤖")
+
+    # Step 2: Build system prompt
+    system_prompt = f"You are an emotion-adaptive chatbot. The user is currently feeling {detected_emotion}. Respond with empathy."
+
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": f"{system_prompt}\n\n{message}"}]
+                }
+            ]
+        }
+        r = requests.post(url, json=payload)
+        r.raise_for_status()
+        obj = r.json()
+
+        reply = obj["candidates"][0]["content"]["parts"][0]["text"]
+
+        # Step 3: Return reply with emotion emoji
+        return f"{emoji} {reply}"
+
+    except Exception as e:
+        logging.error(f"Gemini API error: {e}")
+        return "I'm having trouble connecting right now."
+
+with gr.Blocks() as demo:
+    gr.Markdown("## 🌟 Emotion-Adaptive Chatbot (Gradio Demo)")
+    chatbot_ui = gr.ChatInterface(fn=gradio_chatbot)
+
+if __name__ == "__main__":
+    # Run Flask in one process
+    import threading
+
+    def run_flask():
+        app.run(host="0.0.0.0", port=5000, debug=True)
+
+    threading.Thread(target=run_flask).start()
+    # Run Gradio in another
+    demo.launch(server_name="0.0.0.0", server_port=7860)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
