@@ -8,14 +8,14 @@ import requests
 import json
 import cv2
 import numpy as np
-
+from flask import Response, stream_with_context
 # --- CONFIGURATION ---
 logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # --- API KEYS (Replace with your actual keys) ---
-OPENROUTER_API_KEY = "YOUR_OPENROUTER_API_KEY"  # <-- IMPORTANT: REPLACE THIS
+OPENROUTER_API_KEY="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"  # <-- IMPORTANT: REPLACE THIS
 YOUTUBE_API_KEY = "AIzaSyD-iWwttpmz_T-agp9OhTTESb5OUwMuG5A"
 SPOTIFY_CLIENT_ID = "YOUR_SPOTIFY_CLIENT_ID"
 SPOTIFY_CLIENT_SECRET = "YOUR_SPOTIFY_CLIENT_SECRET"
@@ -247,6 +247,85 @@ def recommend():
 
 
     return jsonify(recommendations)
+
+
+@app.route('/chat_with_emotion', methods=['POST'])
+def chat_with_emotion():
+    # ... (the beginning of your function is the same)
+    text_emotion_model = get_text_emotion_model()
+    if text_emotion_model is None:
+        return jsonify({"error": "Text emotion model is not available."}), 500
+
+    data = request.get_json()
+    user_message = data.get("message")
+    user_emotion = data.get("emotion", None)
+
+    if not user_message:
+        return jsonify({"error": "No message provided"}), 400
+
+    try:
+        if not user_emotion:
+            emotion_results = text_emotion_model(user_message)
+            dominant_emotion = emotion_results[0][0]['label'] if emotion_results else 'neutral'
+        else:
+            dominant_emotion = user_emotion
+    except Exception:
+        dominant_emotion = 'neutral'
+    
+    # This part remains the same
+    tone_map = {
+        'joy': 'cheerful and uplifting', 'sadness': 'empathetic and comforting',
+        'anger': 'calm and reassuring', 'optimism': 'encouraging and upbeat',
+        'love': 'warm and affectionate', 'fear': 'soothing and supportive',
+        'happy': 'cheerful and uplifting', 'sad': 'empathetic and comforting',
+        'angry': 'calm and reassuring',
+    }
+    tone = tone_map.get(dominant_emotion, 'neutral')
+    system_prompt = f"You are SentioAI, an emotionally intelligent assistant. Your user is currently feeling {dominant_emotion}. Respond in a {tone} tone. Keep your responses concise and helpful. When the user is feeling sad or angry, try to be extra supportive and provide some motivational words."
+
+    # --- THIS IS THE NEW STREAMING LOGIC ---
+    def generate():
+        try:
+            # Note: Added "stream": True
+            response = requests.post(
+                url="https://openrouter.ai/api/v1/chat/completions",
+                headers={"Authorization": f"Bearer {OPENROUTER_API_KEY}"},
+                stream=True, # Enable streaming
+                data=json.dumps({
+                    "model": "google/gemini-flash-1.5",
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_message}
+                    ],
+                    "stream": True # The API requires this parameter in the body
+                })
+            )
+            response.raise_for_status()
+            
+            # Process the stream from the API
+            for line in response.iter_lines():
+                if line:
+                    decoded_line = line.decode('utf-8')
+                    if decoded_line.startswith('data: '):
+                        json_str = decoded_line[6:]
+                        if json_str.strip() == '[DONE]':
+                            break
+                        try:
+                            data = json.loads(json_str)
+                            if 'choices' in data and len(data['choices']) > 0:
+                                delta = data['choices'][0].get('delta', {})
+                                content = delta.get('content')
+                                if content:
+                                    # Send each piece of content to the frontend
+                                    yield content
+                        except json.JSONDecodeError:
+                            continue # Ignore invalid JSON lines
+        except Exception as e:
+            logging.error(f"Streaming API Error: {e}")
+            yield "I'm having trouble connecting right now."
+
+    # Return a streaming response
+    return Response(stream_with_context(generate()), mimetype='text/plain')
 
 
 if __name__ == '__main__':
