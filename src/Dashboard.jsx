@@ -37,7 +37,15 @@ const Dashboard = ({ user, auth, db, storage }) => {
         if (videoRef.current) {
             // When the index changes, load and play the new video source
             videoRef.current.load();
-            videoRef.current.play().catch(error => console.error("Error attempting to play video:", error));
+            const playPromise = videoRef.current.play();
+            if (playPromise !== undefined) {
+                 playPromise.catch(error => {
+                    // This check specifically ignores the AbortError
+                    if (error.name !== 'AbortError') {
+                        console.error("Error attempting to play video:", error);
+                    }
+                });
+            }
         }
     }, [currentVideoIndex]);
 
@@ -49,7 +57,7 @@ const Dashboard = ({ user, auth, db, storage }) => {
             case 'face': return <FaceAnalysis user={user} db={db} onEmotionChange={setEmotion} />;
             case 'voice': return <VoiceAnalysis user={user} db={db} storage={storage} />;
             case 'chatbot': return <AdaptiveChatbot user={user} db={db} emotion={emotion} />;
-            case 'recommender': return <MoodRecommender />;
+            case 'recommender': return <MoodRecommender emotion={emotion} />;
             case 'sentiment': return <SentimentDashboard db={db} user={user} />;
             default: return <FaceAnalysis user={user} db={db} onEmotionChange={setEmotion} />;
         }

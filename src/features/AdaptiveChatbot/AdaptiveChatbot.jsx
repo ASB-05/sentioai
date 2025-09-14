@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bot, Send } from 'lucide-react';
 import './AdaptiveChatbot.css';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
-const FLASK_API_URL = 'http://127.0.0.1:5000';
+// Replace with your actual OpenRouter API Key
+const OPENROUTER_API_KEY = process.env.REACT_APP_OPENROUTER_API_KEY;
+const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-const AdaptiveChatbot = ({ user, db, emotion }) => {
+const AdaptiveChatbot = ({ emotion }) => {
   const [messages, setMessages] = useState([
-    { id: 1, text: "Hello! How are you feeling today?", sender: 'bot', emotion: 'neutral' }
+    { role: 'assistant', content: "Hello! How can I help you today?" }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,23 +28,34 @@ const AdaptiveChatbot = ({ user, db, emotion }) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    const userMessageText = input;
-    const userMessage = { id: Date.now(), text: userMessageText, sender: 'user' };
-
-    const botMessageId = Date.now() + 1;
-    setMessages(prev => [
-      ...prev,
-      userMessage,
-      { id: botMessageId, text: '', sender: 'bot', emotion: 'neutral' }
-    ]);
+    const userMessage = { role: 'user', content: input };
+    const newMessages = [...messages, userMessage];
+    
+    setMessages(newMessages);
     setInput('');
     setIsLoading(true);
 
+    // Add a placeholder for the bot's response
+    setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+
     try {
-      const response = await fetch(`${FLASK_API_URL}/chat_with_emotion`, {
+      // The system prompt instructs the AI on its personality and current context
+      const systemPrompt = {
+        role: 'system',
+        content: `You are SentioAI, a friendly and empathetic assistant. Respond with kindness and understanding. The user's currently detected emotion is: ${emotion || 'not detected'}. Adapt your tone and response to be mindful of this emotion.`
+      };
+
+      const response = await fetch(OPENROUTER_API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessageText, emotion })
+        headers: {
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-3.5-turbo", // You can change this to your preferred model
+          messages: [systemPrompt, ...newMessages],
+          stream: true
+        })
       });
 
       if (!response.ok || !response.body) {
@@ -51,44 +63,43 @@ const AdaptiveChatbot = ({ user, db, emotion }) => {
       }
 
       const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let finalBotText = '';
+      const decoder = new TextDecoder(); // <-- THIS IS THE FIX
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-
-        // ✅ Stop if [DONE] is received
-        if (chunk.includes("[DONE]")) break;
-
-        finalBotText += chunk;
-
-        // Update bot's message progressively
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === botMessageId ? { ...msg, text: msg.text + chunk } : msg
-          )
-        );
+        
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+            if (line.startsWith('data: ')) {
+                const data = line.substring(6);
+                if (data.trim() === '[DONE]') {
+                    return;
+                }
+                try {
+                    const json = JSON.parse(data);
+                    const content = json.choices[0]?.delta?.content || '';
+                    if (content) {
+                         setMessages(prev =>
+                            prev.map((msg, index) =>
+                                index === prev.length - 1 ? { ...msg, content: msg.content + content } : msg
+                            )
+                        );
+                    }
+                } catch (error) {
+                    // Ignore parsing errors for incomplete JSON
+                }
+            }
+        }
       }
-
-      // Save to Firestore
-      await addDoc(collection(db, "sentio_public_sentiment"), {
-        userId: user.uid,
-        email: user.email,
-        analysisType: 'chat',
-        userMessage: userMessageText,
-        botResponse: finalBotText,
-        detectedEmotion: emotion || 'text-analyzed',
-        createdAt: serverTimestamp(),
-      });
 
     } catch (error) {
       console.error("Chat error:", error);
       setMessages(prev =>
-        prev.map(msg =>
-          msg.id === botMessageId ? { ...msg, text: "Sorry, I'm having trouble connecting. Please try again." } : msg
+        prev.map((msg, index) =>
+            index === prev.length - 1 ? { ...msg, content: "Sorry, I'm having trouble connecting. Please try again." } : msg
         )
       );
     } finally {
@@ -101,16 +112,16 @@ const AdaptiveChatbot = ({ user, db, emotion }) => {
       <h1><Bot className="inline-block mr-2" /> Emotion-Adaptive Chatbot</h1>
       <p>I can adapt my responses based on your feelings. Give it a try!</p>
       <div className="chat-window">
-        {messages.map(msg => (
-          <div key={msg.id} className={`chat-message ${msg.sender}`}>
+        {messages.map((msg, index) => (
+          <div key={index} className={`chat-message ${msg.role === 'user' ? 'user' : 'bot'}`}>
             <div className="message-bubble">
-              {msg.sender === 'bot' && (
-                <span className="emotion-badge" title={`Detected Emotion: ${emotion || msg.emotion}`}>
-                  {emotionEmojiMap[emotion || msg.emotion] || '🤖'}
+              {msg.role === 'assistant' && (
+                <span className="emotion-badge" title={`Detected Emotion: ${emotion || 'neutral'}`}>
+                  {emotionEmojiMap[emotion || 'neutral'] || '🤖'}
                 </span>
               )}
-              {msg.text}
-              {isLoading && msg.id === messages[messages.length - 1].id &&
+              {msg.content}
+              {isLoading && index === messages.length - 1 &&
                 <span className="blinking-cursor"></span>}
             </div>
           </div>
